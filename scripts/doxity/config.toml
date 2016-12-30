@@ -1,10 +1,10 @@
-linkPrefix = ""
+linkPrefix = "/OpenDomainNameSystem"
 compiler = "0.4.4+commit.4633f3de.Darwin.appleclang"
 name = "open-domain-name-system"
 description = "Open Domain Name System"
 homepage = "https://github.com/harshjv/OpenDomainNameSystem#readme"
 author = "Harsh Vakharia <harshjv@gmail.com> (https://harshjv.github.io)"
-buildTime = 2016-12-30T11:38:59.478Z
+buildTime = 2016-12-30T11:51:47.503Z
 target = "scripts/doxity"
 src = "contracts/*"
 dir = "pages/docs"
@@ -20,7 +20,7 @@ providerUrl = "https://ropsten.infura.io/FdmCz73HAUeJpZwGB3Kb"
 [whitelist]
 
 [whitelist.all]
-abi = true
+abi = false
 methods = true
-bytecode = true
-source = true
+bytecode = false
+source = false
