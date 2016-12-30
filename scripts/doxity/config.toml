@@ -1,0 +1,26 @@
+linkPrefix = ""
+compiler = "0.4.4+commit.4633f3de.Darwin.appleclang"
+name = "open-domain-name-system"
+description = "Open Domain Name System"
+homepage = "https://github.com/harshjv/OpenDomainNameSystem#readme"
+author = "Harsh Vakharia <harshjv@gmail.com> (https://harshjv.github.io)"
+buildTime = 2016-12-30T11:38:59.478Z
+target = "scripts/doxity"
+src = "contracts/*"
+dir = "pages/docs"
+source = "https://github.com/DigixGlobal/doxity-gatsby-starter-project/archive/9445d59056058159ce25d7cd1643039523718553.tar.gz"
+out = "docs"
+license = "UNLICENSED"
+version = "1.0.0"
+
+[interaction]
+network = "2"
+providerUrl = "https://ropsten.infura.io/FdmCz73HAUeJpZwGB3Kb"
+
+[whitelist]
+
+[whitelist.all]
+abi = true
+methods = true
+bytecode = true
+source = true

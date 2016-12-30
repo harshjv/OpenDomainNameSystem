@@ -2,7 +2,7 @@ pragma solidity ^0.4.2;
 
 /**
  @title Open Domain Name System Contract
- @author Harsh Vakharia <harshjv@gmail.com>
+ @author Harsh Vakharia <harshjv@gmail.com> (https://harshjv.github.io)
  */
 contract OpenDomainNameSystem {
   enum RecordType { A, NS, CNAME, SOA, PTR, MX, TXT, AAAA, SRV, NAPTR, OPT, SPF, TLSA }
@@ -123,11 +123,12 @@ contract OpenDomainNameSystem {
    */
   function getWhoisData (string domain)
                         domainShouldExist(domain)
-                        constant returns (address, string, uint, uint) {
-    address owner = domainToOwner[domain];
-    string whois = domainToWhois[domain];
-    uint created = domainToCreated[domain];
-    uint updated = domainToUpdated[domain];
+                        constant returns (address owner, string whois,
+                                          uint created, uint updated) {
+    owner = domainToOwner[domain];
+    whois = domainToWhois[domain];
+    created = domainToCreated[domain];
+    updated = domainToUpdated[domain];
 
     return (owner, whois, created, updated);
   }
@@ -148,11 +149,11 @@ contract OpenDomainNameSystem {
    @notice Get DNS record of a registered domain
    @param domain Domain name
    @param recordType Record type from RecordType enum data type
-   @return data JSON-encoded record data
+   @return { "record": "JSON-encoded record data" }
    */
   function getRecord (string domain, RecordType recordType)
                       domainShouldExist(domain)
-                      constant returns (string) {
+                      constant returns (string record) {
     return domainToRecords[domain][uint(recordType)];
   }
 
@@ -186,9 +187,9 @@ contract OpenDomainNameSystem {
   /**
    @notice Get registered domain count of an ether address
    @param owner Ether address (pass null string to set caller as owner)
-   @return { "domainCount": "Number of domain registered" }
+   @return { "count": "Number of domain registered" }
    */
-  function getDomainCount (address owner) constant returns (uint) {
+  function getDomainCount (address owner) constant returns (uint count) {
     if (owner == address(0x0)) owner = msg.sender;
 
     return ownerToDomains[owner].length;
@@ -200,7 +201,8 @@ contract OpenDomainNameSystem {
    @param owner Ether address (pass null string to set caller as owner)
    @return { "domain": "Domain name" }
    */
-  function getDomainFromIndex (uint index, address owner) constant returns (string) {
+  function getDomainFromIndex (uint index, address owner) constant
+                               returns (string domain) {
     if (owner == address(0x0)) owner = msg.sender;
 
     if (index >= ownerToDomains[owner].length) return;

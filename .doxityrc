@@ -1,0 +1,19 @@
+{
+  "target": "scripts/doxity",
+  "src": "contracts/*",
+  "dir": "pages/docs",
+  "source": "https://github.com/DigixGlobal/doxity-gatsby-starter-project/archive/9445d59056058159ce25d7cd1643039523718553.tar.gz",
+  "out": "docs",
+  "interaction": {
+    "network": "2",
+    "providerUrl": "https://ropsten.infura.io/FdmCz73HAUeJpZwGB3Kb"
+  },
+  "whitelist": {
+    "all": {
+      "abi": false,
+      "methods": true,
+      "bytecode": false,
+      "source": false
+    }
+  }
+}

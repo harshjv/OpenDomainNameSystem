@@ -1,0 +1,29 @@
+{
+  "name": "open-domain-name-system",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Open Domain Name System",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "docs:init": "doxity init",
+    "docs:compile": "doxity compile",
+    "docs:develop": "doxity develop",
+    "docs:publish": "doxity publish",
+    "docs:build": "doxity build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/harshjv/OpenDomainNameSystem.git"
+  },
+  "author": "Harsh Vakharia <harshjv@gmail.com> (https://harshjv.github.io)",
+  "license": "UNLICENSED",
+  "bugs": {
+    "url": "https://github.com/harshjv/OpenDomainNameSystem/issues"
+  },
+  "homepage": "https://github.com/harshjv/OpenDomainNameSystem#readme",
+  "devDependencies": {
+    "@digix/doxity": "^0.3.2",
+    "solc": "^0.4.7"
+  }
+}
