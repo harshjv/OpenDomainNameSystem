@@ -1,121 +1,94 @@
-import 'library/strings.sol';
-
 pragma solidity ^0.4.2;
 
 contract OpenDomainNameSystem {
-  using strings for *;
-
-  struct WHOIS {
-    address ethAddr;
-    string name;
-
-    string addr;
-    string phone;
-    string email;
-
-    uint created;
-    uint updated;
-  }
-
   enum RecordType { A, NS, CNAME, SOA, PTR, MX, TXT, AAAA, SRV, NAPTR, OPT, SPF, TLSA }
-  uint constant totalRecordTypes = uint(RecordType.TLSA);
+  uint constant totalRecordTypes = uint(RecordType.TLSA) + 1;
 
   // domain => owner
-  mapping(string => address) domainToAddress;
-  // address => domains
-  mapping(address => string[]) addressToDomains;
-  // domain => records
+  mapping(string => address) domainToOwner;
+  // owner => array(domain)
+  mapping(address => string[]) ownerToDomains;
+  // domain => (recordType => json(record))
   mapping(string => mapping(uint => string)) domainToRecords;
-  // domain => WHOIS
-  mapping(string => WHOIS) domainToWhois;
+  // domain => index of domain in ownerToDomains(owner)
+  mapping(string => uint) domainToOwnerArrayIndex;
+  // domain => json(whois)
+  mapping(string => string) domainToWhois;
+  // domain => created timestamp
+  mapping(string => uint) domainToCreated;
+  // domain => updated timestamp
+  mapping(string => uint) domainToUpdated;
+
+  function OpenDomainNameSystem () {}
 
   modifier domainShouldNotExist (string domain) {
-    if (domainToAddress[domain] != address(0x0)) throw;
+    if (domainToOwner[domain] != address(0x0)) throw;
     _;
   }
 
   modifier domainShouldExist (string domain) {
-    if (domainToAddress[domain] == address(0x0)) throw;
+    if (domainToOwner[domain] == address(0x0)) throw;
     _;
   }
 
-  modifier onlyByOwner(string domain) {
+  modifier onlyByOwner (string domain) {
     address sender = msg.sender;
-    address owner = domainToAddress[domain];
+    address owner = domainToOwner[domain];
 
     if (owner != sender) throw;
     _;
   }
 
-  function OpenDomainNameSystem () {}
+  modifier domainUpdated (string domain) {
+    _;
+    domainToUpdated[domain] = now;
+  }
 
-  function registerDomain (string domain, string name, string addr,
-                           string phone, string email)
-                           domainShouldNotExist(domain) {
+  modifier domainCreated (string domain) {
+    _;
+    domainToCreated[domain] = now;
+  }
+
+  function registerDomain (string domain, string whois)
+                           domainShouldNotExist(domain)
+                           domainCreated(domain)
+                           domainUpdated(domain) {
   	address owner = msg.sender;
-    domainToAddress[domain] = owner;
-    addressToDomains[owner].push(domain);
-    domainToWhois[domain] = WHOIS(owner, name, addr, phone, email, now, now);
+
+    setDomainOwner(domain, owner);
+
+    domainToWhois[domain] = whois;
   }
 
-  function transferDomain (string domain, address newOwner, string name,
-                           string addr, string phone, string email)
+  function transferDomain (string domain, address newOwner, string whois)
                            domainShouldExist(domain)
-                           onlyByOwner(domain) {
-    uint limit = addressToDomains[msg.sender].length - 1;
-    bool found = false;
+                           onlyByOwner(domain)
+                           domainUpdated(domain) {
+    address oldOwner = msg.sender;
 
-    for (uint i = 0; i <= limit; i++) {
-      if (!found &&
-          addressToDomains[msg.sender][i].toSlice().equals(domain.toSlice())) {
-        found = true;
-      }
+    removeDomainOwner(domain, oldOwner);
+    removeAllRecordsOfDomain(domain);
+    setDomainOwner(domain, newOwner);
 
-      if (found && i != limit) {
-        addressToDomains[msg.sender][i] = addressToDomains[msg.sender][i + 1];
-      }
-    }
-
-    delete addressToDomains[msg.sender][limit];
-    addressToDomains[msg.sender].length--;
-
-    addressToDomains[newOwner].push(domain);
-    domainToAddress[domain] = newOwner;
-
-    domainToWhois[domain] = WHOIS(newOwner, name, addr, phone, email,
-                                  domainToWhois[domain].created, now);
+    domainToWhois[domain] = whois;
   }
 
-  function setWhoisData (string domain, string name, string addr,
-                         string phone, string email)
+  function setWhoisData (string domain, string whois)
                          domainShouldExist(domain)
-                         onlyByOwner(domain) {
-    address owner = msg.sender;
-    WHOIS oldWhoisData = domainToWhois[domain];
-
-    name = bytes(name).length == 0 ? oldWhoisData.name : name;
-    addr = bytes(addr).length == 0 ? oldWhoisData.addr : addr;
-    phone = bytes(phone).length == 0 ? oldWhoisData.phone : phone;
-    email = bytes(email).length == 0 ? oldWhoisData.email : email;
-
-    domainToWhois[domain] = WHOIS(owner, name, addr, phone, email, oldWhoisData.created, now);
+                         onlyByOwner(domain)
+                         domainUpdated(domain) {
+    domainToWhois[domain] = whois;
   }
 
   function getWhoisData (string domain)
                         domainShouldExist(domain)
-                        constant public returns (address ethAddr, string name,
-                                        string addr, string phone,
-                                        string email, uint256 created,
-                                        uint256 updated) {
-    WHOIS whois = domainToWhois[domain];
+                        constant returns (address, string, uint, uint) {
+    address owner = domainToOwner[domain];
+    string whois = domainToWhois[domain];
+    uint created = domainToCreated[domain];
+    uint updated = domainToUpdated[domain];
 
-    ethAddr = whois.ethAddr;
-    name = whois.name;
-    addr = whois.addr;
-    phone = whois.phone;
-    email = whois.email;
-    created = whois.created;
-    updated = whois.updated;
+    return (owner, whois, created, updated);
   }
 
   function setRecord (string domain, RecordType recordType, string data)
@@ -126,7 +99,6 @@ contract OpenDomainNameSystem {
 
   function getRecord (string domain, RecordType recordType)
                       domainShouldExist(domain)
-                      onlyByOwner(domain)
                       constant returns (string) {
     return domainToRecords[domain][uint(recordType)];
   }
@@ -139,42 +111,57 @@ contract OpenDomainNameSystem {
 
   function deleteDomain (string domain)
                         domainShouldExist(domain)
-                        onlyByOwner(domain) public {
+                        onlyByOwner(domain) {
   	address owner = msg.sender;
-    uint limit = addressToDomains[owner].length - 1;
-    bool found = false;
 
-    for (uint i = 0; i <= limit; i++) {
-      if (!found &&
-          addressToDomains[owner][i].toSlice().equals(domain.toSlice())) {
-        found = true;
-      }
+    removeDomainOwner(domain, owner);
+    removeAllRecordsOfDomain(domain);
 
-      if (found && i != limit) {
-        addressToDomains[owner][i] = addressToDomains[owner][i + 1];
-      }
-    }
-
-    delete addressToDomains[owner][limit];
-    addressToDomains[owner].length--;
-    delete domainToAddress[domain];
-
-    for (uint j = 0; j < totalRecordTypes; j++) {
-      delete domainToRecords[domain][j];
-    }
+    delete domainToCreated[domain];
+    delete domainToUpdated[domain];
   }
 
-  function getDomainCount (address owner) constant public returns (uint) {
+  function getDomainCount (address owner) constant returns (uint) {
     if (owner == address(0x0)) owner = msg.sender;
 
-    return addressToDomains[owner].length;
+    return ownerToDomains[owner].length;
   }
 
-  function getDomain (uint index, address owner) constant public returns (string) {
+  function getDomainFromIndex (uint index, address owner) constant returns (string) {
     if (owner == address(0x0)) owner = msg.sender;
 
-    if (index >= addressToDomains[owner].length) return;
+    if (index >= ownerToDomains[owner].length) return;
 
-    return addressToDomains[owner][index];
+    return ownerToDomains[owner][index];
+  }
+
+  function setDomainOwner (string domain, address owner) private {
+    domainToOwner[domain] = owner;
+    domainToOwnerArrayIndex[domain] = ownerToDomains[owner].length;
+    ownerToDomains[owner].push(domain);
+  }
+
+  function removeDomainOwner (string domain, address owner) private {
+    uint indexOfDomain = domainToOwnerArrayIndex[domain];
+    string[] domainArray = ownerToDomains[owner];
+    uint indexOfLastDomain = domainArray.length - 1;
+
+    if (indexOfDomain != indexOfLastDomain) {
+      string lastDomain = domainArray[indexOfLastDomain];
+      domainArray[indexOfDomain] = lastDomain;
+      domainToOwnerArrayIndex[lastDomain] = indexOfDomain;
+    }
+
+    delete domainArray[indexOfLastDomain];
+    domainArray.length--;
+
+    delete domainToOwner[domain];
+    delete domainToOwnerArrayIndex[domain];
+  }
+
+  function removeAllRecordsOfDomain (string domain) private {
+    for (uint i = 0; i < totalRecordTypes; i++) {
+      delete domainToRecords[domain][i];
+    }
   }
 }
