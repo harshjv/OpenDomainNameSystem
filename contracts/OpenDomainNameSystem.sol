@@ -1,5 +1,9 @@
 pragma solidity ^0.4.2;
 
+/**
+ @title Open Domain Name System Contract
+ @author Harsh Vakharia <harshjv@gmail.com>
+ */
 contract OpenDomainNameSystem {
   enum RecordType { A, NS, CNAME, SOA, PTR, MX, TXT, AAAA, SRV, NAPTR, OPT, SPF, TLSA }
   uint constant totalRecordTypes = uint(RecordType.TLSA) + 1;
@@ -19,6 +23,9 @@ contract OpenDomainNameSystem {
   // domain => updated timestamp
   mapping(string => uint) domainToUpdated;
 
+  /**
+   @notice OpenDomainNameSystem Constructor
+   */
   function OpenDomainNameSystem () {}
 
   modifier domainShouldNotExist (string domain) {
@@ -49,6 +56,18 @@ contract OpenDomainNameSystem {
     domainToCreated[domain] = now;
   }
 
+  modifier addressShouldBeDifferentThanSender (address addr) {
+    address sender = msg.sender;
+
+    if (sender == addr) throw;
+    _;
+  }
+
+  /**
+   @notice Register domain name
+   @param domain Domain name to be registered
+   @param whois JSON-encoded WHOIS information
+   */
   function registerDomain (string domain, string whois)
                            domainShouldNotExist(domain)
                            domainCreated(domain)
@@ -60,9 +79,16 @@ contract OpenDomainNameSystem {
     domainToWhois[domain] = whois;
   }
 
+  /**
+   @notice Transfer registered domain name to a different ether address
+   @param domain Domain name to be transfered
+   @param newOwner Ether address of the new owner
+   @param whois JSON-encoded WHOIS information
+   */
   function transferDomain (string domain, address newOwner, string whois)
                            domainShouldExist(domain)
                            onlyByOwner(domain)
+                           addressShouldBeDifferentThanSender(newOwner)
                            domainUpdated(domain) {
     address oldOwner = msg.sender;
 
@@ -73,6 +99,11 @@ contract OpenDomainNameSystem {
     domainToWhois[domain] = whois;
   }
 
+  /**
+   @notice Set WHOIS data of a registered domain
+   @param domain Domain name
+   @param whois JSON-encoded WHOIS information
+   */
   function setWhoisData (string domain, string whois)
                          domainShouldExist(domain)
                          onlyByOwner(domain)
@@ -80,6 +111,16 @@ contract OpenDomainNameSystem {
     domainToWhois[domain] = whois;
   }
 
+  /**
+   @notice Get WHOIS data of a registered domain
+   @param domain Domain name
+   @return {
+     "owner" : "Ether address of domain owner",
+     "whois": "JSON-encoded WHOIS data",
+     "created": "Created-at timestamp",
+     "updated": "Updated-at timestamp"
+   }
+   */
   function getWhoisData (string domain)
                         domainShouldExist(domain)
                         constant returns (address, string, uint, uint) {
@@ -91,24 +132,45 @@ contract OpenDomainNameSystem {
     return (owner, whois, created, updated);
   }
 
+  /**
+   @notice Set DNS record of a registered domain
+   @param domain Domain name
+   @param recordType Record type from RecordType enum data type
+   @param data JSON-encoded record data
+   */
   function setRecord (string domain, RecordType recordType, string data)
                          domainShouldExist(domain)
                          onlyByOwner(domain) {
     domainToRecords[domain][uint(recordType)] = data;
   }
 
+  /**
+   @notice Get DNS record of a registered domain
+   @param domain Domain name
+   @param recordType Record type from RecordType enum data type
+   @return data JSON-encoded record data
+   */
   function getRecord (string domain, RecordType recordType)
                       domainShouldExist(domain)
                       constant returns (string) {
     return domainToRecords[domain][uint(recordType)];
   }
 
+  /**
+   @notice Delete DNS record of a registered domain
+   @param domain Domain name
+   @param recordType Record type from RecordType enum data type
+   */
   function deleteRecord (string domain, RecordType recordType)
                          domainShouldExist(domain)
                          onlyByOwner(domain) {
     delete domainToRecords[domain][uint(recordType)];
   }
 
+  /**
+   @notice Delete a registered domain
+   @param domain Domain name
+   */
   function deleteDomain (string domain)
                         domainShouldExist(domain)
                         onlyByOwner(domain) {
@@ -121,12 +183,23 @@ contract OpenDomainNameSystem {
     delete domainToUpdated[domain];
   }
 
+  /**
+   @notice Get registered domain count of an ether address
+   @param owner Ether address (pass null string to set caller as owner)
+   @return { "domainCount": "Number of domain registered" }
+   */
   function getDomainCount (address owner) constant returns (uint) {
     if (owner == address(0x0)) owner = msg.sender;
 
     return ownerToDomains[owner].length;
   }
 
+  /**
+   @notice Get domain name from index
+   @param index Index of domain
+   @param owner Ether address (pass null string to set caller as owner)
+   @return { "domain": "Domain name" }
+   */
   function getDomainFromIndex (uint index, address owner) constant returns (string) {
     if (owner == address(0x0)) owner = msg.sender;
 
